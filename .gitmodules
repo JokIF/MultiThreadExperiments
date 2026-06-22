@@ -1,0 +1,3 @@
+[submodule "libs/MHope"]
+	path = libs/MHope
+	url = https://github.com/JokIF/MHope
