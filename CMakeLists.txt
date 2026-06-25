@@ -1,6 +1,6 @@
 # ---------------------Project settings------------------------
 cmake_minimum_required(VERSION 3.15)
-project(MultiThreadExperiments VERSION 0.0.2 LANGUAGES CXX)
+project(MultiThreadExperiments VERSION 0.0.3 LANGUAGES CXX)
 
 option(BUILD_SHARED_LIBS "Build shared libraries" OFF)
 option(BUILD_TESTING "Build all tests" ON)
@@ -11,7 +11,21 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 # -----------------------dependencies--------------------------
 
 add_subdirectory(libs/MHope)
-# Google Tests
+
+# Testing (GoogleTest)
+if (BUILD_TESTING)
+    include(FetchContent)
+    FetchContent_Declare(
+        googletest
+        GIT_REPOSITORY  https://github.com/google/googletest.git
+        GIT_TAG         v1.14.0
+    )
+    FetchContent_MakeAvailable(googletest)
+    
+    enable_testing()
+
+    add_definitions(-DBUILD_TESTING)
+endif()
 
 # --------------------Include All Modules----------------------
 
