@@ -1,9 +1,10 @@
 #include "Priotex.h"
+#ifdef BUILD_TESTING
+#include "../tests/PriotexTestUtils.h"
+#endif
 
 namespace mutex
 {   
-Priotex::Priotex(Priorety value) : m_prioretyValue(value) {}
-
 void Priotex::UpdatePriorety() noexcept
 {
     m_prevPrioretyValue = m_thisThreadPrioretyValue;
@@ -38,4 +39,11 @@ bool Priotex::try_lock()
     UpdatePriorety();
     return true;
 }
+
+#ifdef BUILD_TESTING
+std::unique_ptr<unitTests::UnitTestDataPriotex> Priotex::GetTestWrapper() const
+{
+    return std::make_unique<unitTests::UnitTestDataPriotex>(*this);
+}
+#endif
 }

@@ -10,3 +10,17 @@ add_executable(PriotexExample examples/testExample.cpp)
 target_link_libraries(PriotexExample PRIVATE PriotexLib)
 target_compile_features(PriotexExample PUBLIC cxx_std_23)
 target_compile_options(PriotexExample PRIVATE "/Zc:preprocessor")
+
+if (BUILD_TESTING)
+    file(GLOB TEST_SOURCES tests/*.cpp)
+    if (TEST_SOURCES)
+        add_executable(PriotexTests ${TEST_SOURCES})
+        target_link_libraries(PriotexTests
+            PRIVATE
+                PriotexLib
+                gtest_main
+                MHopeLib
+        )
+        add_test(NAME PriotexTests COMMAND PriotexTests)
+    endif()
+endif()
