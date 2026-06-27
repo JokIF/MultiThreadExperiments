@@ -24,7 +24,7 @@ void Priotex::lock()
     UpdatePriorety();
 }
 
-void Priotex::unlock() noexcept
+void Priotex::unlock()
 {
     m_thisThreadPrioretyValue = m_prevPrioretyValue;
     m_innerMutex.unlock();

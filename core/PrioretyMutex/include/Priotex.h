@@ -18,15 +18,15 @@ class Priotex
 public:
     using Priorety = unsigned long;
 
-    constexpr explicit Priotex(Priorety value)  : m_prioretyValue(value) {}
+    constexpr explicit Priotex(Priorety value) : m_prioretyValue(value) {}
 
-    Priotex(const Priotex&) noexcept = delete;
-    Priotex(Priotex&&) noexcept = delete;
+    Priotex(const Priotex&) = delete;
+    Priotex(Priotex&&) = delete;
     Priotex& operator=(const Priotex&) = delete;
     Priotex& operator=(Priotex&&) = delete;
 
     void    lock();
-    void    unlock() noexcept;
+    void    unlock();
     bool    try_lock();
 
 private:
