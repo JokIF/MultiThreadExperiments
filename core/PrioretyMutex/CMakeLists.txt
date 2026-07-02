@@ -1,4 +1,4 @@
-project(Priotex VERSION 1.0.0 LANGUAGES CXX)
+project(Priotex VERSION 1.0.1 LANGUAGES CXX)
 
 set(SOURCES src/Priotex.cpp)
 add_library(PriotexLib ${SOURCES})
