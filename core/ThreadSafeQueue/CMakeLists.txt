@@ -1,0 +1,2 @@
+project(ThreadSafeQueue VERSION 0.0.1 LANGUAGES CXX)
+
