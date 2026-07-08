@@ -1,4 +1,4 @@
-project(ThreadSafeStack VERSION 1.0.0 LANGUAGES CXX)
+project(ThreadSafeStack VERSION 1.1.0 LANGUAGES CXX)
 
 set(SOURCES_THREAD_SAFE_STACK_LIB src/SimpleThreadSafeStack.cpp)
 add_library(ThreadSafeStackLib ${SOURCES_THREAD_SAFE_STACK_LIB})
