@@ -4,24 +4,24 @@
 #include <memory>
 #include <exception>
 
-namespace SimpleStructs
+namespace ThreadSafeStructs
 {
 class EmptyStack : std::exception {
     const char* what() const throw();
 };
 
 template<typename T>
-class ThreadSafeStack
+class SimpleThreadSafeStack
 {
 public:
-    explicit ThreadSafeStack() = default;
+    explicit SimpleThreadSafeStack() = default;
 
-    ThreadSafeStack(const ThreadSafeStack& other)
+    SimpleThreadSafeStack(const SimpleThreadSafeStack& other)
     {
         std::lock_guard lock(other.mtx);
         main_stack = other.main_stack;
     }
-    ThreadSafeStack& operator=(const ThreadSafeStack&) = delete;
+    SimpleThreadSafeStack& operator=(const SimpleThreadSafeStack&) = delete;
 
     void push(T new_value);
 
@@ -35,7 +35,7 @@ private:
 };
 
 template <typename T>
-void ThreadSafeStack<T>::push(T new_value)
+void SimpleThreadSafeStack<T>::push(T new_value)
 {
     auto new_value_ptr = std::make_shared<T>(std::move(new_value));
     std::lock_guard lock(mtx);
@@ -43,7 +43,7 @@ void ThreadSafeStack<T>::push(T new_value)
 }
 
 template <typename T>
-std::shared_ptr<T> ThreadSafeStack<T>::pop()
+std::shared_ptr<T> SimpleThreadSafeStack<T>::pop()
 {
     std::lock_guard lock(mtx);
     if (main_stack.empty()) throw EmptyStack();
@@ -54,7 +54,7 @@ std::shared_ptr<T> ThreadSafeStack<T>::pop()
 }
 
 template <typename T>
-void ThreadSafeStack<T>::pop(T& value)
+void SimpleThreadSafeStack<T>::pop(T& value)
 {
     std::lock_guard lock(mtx);
     if (main_stack.empty()) throw EmptyStack();
@@ -64,7 +64,7 @@ void ThreadSafeStack<T>::pop(T& value)
 }
 
 template <typename T>
-size_t ThreadSafeStack<T>::empty() const 
+size_t SimpleThreadSafeStack<T>::empty() const 
 {
     std::lock_guard lock();
     return main_stack.empty();

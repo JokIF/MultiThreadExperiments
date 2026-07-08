@@ -1,6 +1,6 @@
-#include "ThreadSafeStack.h"
+#include "SimpleThreadSafeStack.h"
 
-namespace SimpleStructs
+namespace ThreadSafeStructs
 {
     const char* EmptyStack::what() const {
         return "Stack is empty\n";
