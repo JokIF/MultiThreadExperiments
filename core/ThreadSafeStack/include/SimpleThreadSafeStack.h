@@ -30,16 +30,15 @@ public:
 
     size_t empty() const;
 private:
-    std::stack<std::shared_ptr<T>> main_stack;
-    std::mutex mtx;
+    std::stack<T> main_stack;
+    mutable std::mutex mtx;
 };
 
 template <typename T>
 void SimpleThreadSafeStack<T>::push(T new_value)
 {
-    auto new_value_ptr = std::make_shared<T>(std::move(new_value));
     std::lock_guard lock(mtx);
-    main_stack.push(new_value_ptr);
+    main_stack.push(std::move(new_value));
 }
 
 template <typename T>
@@ -48,7 +47,7 @@ std::shared_ptr<T> SimpleThreadSafeStack<T>::pop()
     std::lock_guard lock(mtx);
     if (main_stack.empty()) throw EmptyStack();
 
-    auto outValue = main_stack.top();
+    auto outValue = std::make_shared<T>(std::move(main_stack.top()));
     main_stack.pop();
     return outValue;
 }
@@ -59,14 +58,14 @@ void SimpleThreadSafeStack<T>::pop(T& value)
     std::lock_guard lock(mtx);
     if (main_stack.empty()) throw EmptyStack();
     
-    value = *main_stack.top();
+    value = std::move(main_stack.top());
     main_stack.pop();
 }
 
 template <typename T>
 size_t SimpleThreadSafeStack<T>::empty() const 
 {
-    std::lock_guard lock();
+    std::lock_guard lock(mtx);
     return main_stack.empty();
 }
 }
