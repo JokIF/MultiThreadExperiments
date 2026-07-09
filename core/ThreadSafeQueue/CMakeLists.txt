@@ -1,7 +1,8 @@
-project(ThreadSafeQueue VERSION 0.0.3 LANGUAGES CXX)
+project(ThreadSafeQueue VERSION 0.0.5 LANGUAGES CXX)
 
 set(QueueIncludes 
     ${CMAKE_CURRENT_SOURCE_DIR}/include/SimpleThreadSafeQueue.h
+    ${CMAKE_CURRENT_SOURCE_DIR}/include/NonThreadSafeQueue.h
 )
 add_library(ThreadSafeQueueLib INTERFACE)
 target_include_directories(ThreadSafeQueueLib INTERFACE ${CMAKE_CURRENT_SOURCE_DIR}/include)
@@ -20,4 +21,3 @@ if (BUILD_TESTING)
         add_test(NAME ThreadSafeQueueTests COMMAND ThreadSafeQueueTests)
     endif()
 endif()
-
