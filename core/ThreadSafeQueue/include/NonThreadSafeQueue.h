@@ -9,7 +9,7 @@ class EmptyQueue : std::exception {
 };
 
 template <typename T>
-class NonThreadSafeQueue 
+class NonThreadSafeQueue
 {
     struct Node {
         Node(T value) : value(std::move(value)) {}
@@ -28,6 +28,7 @@ public:
 
     void push(T value);
     T pop();
+    std::shared_ptr<T> try_pop();
 
     bool empty() const { return head_node == nullptr; }
 
@@ -59,5 +60,19 @@ T NonThreadSafeQueue<T>::pop()
     head_node = std::move(old_head_node->next_node);
 
     return old_head_node->value;
+}
+
+template <typename T>
+std::shared_ptr<T> NonThreadSafeQueue<T>::try_pop()
+{
+    if (head_node == nullptr)
+        return nullptr;
+
+    auto return_value = std::make_shared<T>(std::move(head_node->value));
+
+    auto old_head_node = std::move(head_node);
+    head_node = std::move(old_head_node->next_node);
+
+    return return_value;
 }
 }
