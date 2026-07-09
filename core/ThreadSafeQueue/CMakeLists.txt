@@ -1,4 +1,4 @@
-project(ThreadSafeQueue VERSION 0.0.5 LANGUAGES CXX)
+project(ThreadSafeQueue VERSION 1.0.0 LANGUAGES CXX)
 
 set(QueueIncludes 
     ${CMAKE_CURRENT_SOURCE_DIR}/include/SimpleThreadSafeQueue.h
