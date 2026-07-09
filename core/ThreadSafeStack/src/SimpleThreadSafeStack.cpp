@@ -2,7 +2,7 @@
 
 namespace ThreadSafeStructs
 {
-    const char* EmptyStack::what() const {
-        return "Stack is empty\n";
+    const char* EmptyStack::what() const noexcept {
+        return "Stack is empty";
     }
 }

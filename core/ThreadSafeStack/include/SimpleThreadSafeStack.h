@@ -7,7 +7,7 @@
 namespace ThreadSafeStructs
 {
 class EmptyStack : std::exception {
-    const char* what() const throw();
+    const char* what() const noexcept override;
 };
 
 template<typename T>

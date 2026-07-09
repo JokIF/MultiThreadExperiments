@@ -5,7 +5,7 @@
 namespace NonThreadSafeStructs
 {
 class EmptyQueue : std::exception {
-    char const* what() const override { return "Queue is empty"; }
+    char const* what() const noexcept override { return "Queue is empty"; }
 };
 
 template <typename T>
