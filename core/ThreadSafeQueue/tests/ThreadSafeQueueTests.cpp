@@ -1,8 +1,10 @@
 #include "gtest/gtest.h"
 #include "ThreadSafeQueue.h"
 #include <thread>
+#include <chrono>
 #include <atomic>
 #include <vector>
+#include <future>
 
 TEST(ThreadSafeQueue, SingleThreadMethodsTest)
 {
@@ -19,6 +21,12 @@ TEST(ThreadSafeQueue, SingleThreadMethodsTest)
     
     EXPECT_TRUE(queue.empty());
     EXPECT_EQ(queue.try_pop(), nullptr);
+    auto f = std::async([&]
+    {
+        std::this_thread::sleep_for(std::chrono::milliseconds(300));
+        queue.push(40000);
+    });
+    EXPECT_EQ(*queue.wait_pop(), 40000);
 }
 
 TEST(ThreadSafeQueue, MultiThreadTest)
