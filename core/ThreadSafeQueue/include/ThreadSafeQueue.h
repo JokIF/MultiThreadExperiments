@@ -25,25 +25,30 @@ public:
     ThreadSafeQueue& operator=(const ThreadSafeQueue&) = delete;
     ThreadSafeQueue& operator=(ThreadSafeQueue&&) noexcept = delete;
 
-    void push(T value);
-    std::shared_ptr<T> try_pop();
-    std::shared_ptr<T> wait_pop();
+    void    push(T value);
 
-    bool empty() const;
+    bool    try_pop(T& value);
+    void    wait_pop(T& value);
+
+    std::shared_ptr<T>  try_pop();
+    std::shared_ptr<T>  wait_pop();
+
+    bool    empty() const;
 
 private:
-    bool empty_locked_head(const std::unique_lock<std::mutex>& head_lock) const;
+    bool    empty_locked_head(const std::unique_lock<std::mutex>& head_lock) const;
+    void    push_tail(std::shared_ptr<T> new_data);
 
-    std::unique_ptr<Node> pop_head();
-    void push_tail(std::shared_ptr<T> new_data);
+    std::unique_ptr<Node>           pop_head();
 
-    std::unique_lock<std::mutex> wait_data() const;
+    std::unique_lock<std::mutex>    wait_data() const;
 
-    std::unique_ptr<Node> head_node;
-    Node* tail_node;
+    std::unique_ptr<Node>   head_node;
+    Node*                   tail_node;
 
-    mutable std::mutex head_mtx;
-    mutable std::mutex tail_mtx;
+    mutable std::mutex      head_mtx;
+    mutable std::mutex      tail_mtx;
+
     mutable std::condition_variable cv;
 };
 
@@ -95,6 +100,24 @@ void ThreadSafeQueue<T>::push(T value)
     const auto new_data = std::make_shared<T>(std::move(value));
     push_tail(new_data);
     cv.notify_one();
+}
+
+template <typename T>
+bool ThreadSafeQueue<T>::try_pop(T& value)
+{
+    std::unique_lock head_lock(head_mtx);
+    if (empty_locked_head(head_lock))
+        return false;
+
+    value = std::move(*pop_head()->value);
+    return true;
+}
+
+template <typename T>
+void ThreadSafeQueue<T>::wait_pop(T& value)
+{
+    std::unique_lock head_lock(wait_data());
+    value = std::move(*pop_head()->value);
 }
 
 template <typename T>

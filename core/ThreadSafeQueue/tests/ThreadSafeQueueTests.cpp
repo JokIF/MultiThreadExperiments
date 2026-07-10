@@ -16,17 +16,33 @@ TEST(ThreadSafeQueue, SingleThreadMethodsTest)
     queue.push(3000);
     EXPECT_FALSE(queue.empty());
     EXPECT_EQ(*queue.try_pop(), 10);
-    EXPECT_EQ(*queue.try_pop(), 200);
-    EXPECT_EQ(*queue.try_pop(), 3000);
+
+    int test_value = 0;
+    EXPECT_TRUE(queue.try_pop(test_value));
+    EXPECT_EQ(test_value, 200);
+
+    EXPECT_EQ(*queue.wait_pop(), 3000);
     
     EXPECT_TRUE(queue.empty());
+
+    test_value = 0;
+    EXPECT_FALSE(queue.try_pop(test_value));
+    EXPECT_EQ(test_value, 0);
     EXPECT_EQ(queue.try_pop(), nullptr);
+
+    test_value = 0;
+
     auto f = std::async([&]
     {
         std::this_thread::sleep_for(std::chrono::milliseconds(300));
         queue.push(40000);
+        std::this_thread::sleep_for(std::chrono::milliseconds(300));
+        queue.push(500000);
     });
     EXPECT_EQ(*queue.wait_pop(), 40000);
+
+    queue.wait_pop(test_value);
+    EXPECT_EQ(test_value, 500000);
 }
 
 TEST(ThreadSafeQueue, MultiThreadTest)
