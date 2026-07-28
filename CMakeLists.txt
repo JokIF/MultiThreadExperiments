@@ -1,17 +1,21 @@
 # ---------------------Project settings------------------------
-cmake_minimum_required(VERSION 3.15)
-project(MultiThreadExperiments VERSION 0.0.3 LANGUAGES CXX)
+cmake_minimum_required(VERSION 3.20)
+project(MultiThreadExperiments VERSION 0.1.0 LANGUAGES CXX)
+
+set(CMAKE_CXX_STANDARD 23)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+set(CMAKE_CXX_EXTENSIONS OFF)
+set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
 option(BUILD_SHARED_LIBS "Build shared libraries" OFF)
 option(BUILD_TESTING "Build all tests" ON)
 option(BUILD_EXAMPLES "Build eny examples" ON)
+option(USE_MHOPE "Use MHope library (submodule)" ON)
 
-set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
+include(cmake/MTECompilerOptions.cmake)
+include(cmake/MTEUtilities.cmake)
 
 # -----------------------dependencies--------------------------
-
-add_subdirectory(libs/MHope)
-
 # Testing (GoogleTest)
 if (BUILD_TESTING)
     include(FetchContent)
@@ -23,17 +27,16 @@ if (BUILD_TESTING)
     FetchContent_MakeAvailable(googletest)
     
     enable_testing()
-
-    add_definitions(-DBUILD_TESTING)
 endif()
 
 # --------------------Include All Modules----------------------
 
-file(GLOB MODULES_DIRS RELATIVE ${CMAKE_CURRENT_SOURCE_DIR}/core ${CMAKE_CURRENT_SOURCE_DIR}/core/*)
-foreach(MODULE_DIR ${MODULES_DIRS})
-    if(IS_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/core/${MODULE_DIR})
-        if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/core/${MODULE_DIR}/CMakeLists.txt)
-            add_subdirectory(core/${MODULE_DIR})
-        endif()
-    endif()
-endforeach()
+add_subdirectory(core/Atomic)
+add_subdirectory(core/PrioretyMutex)
+add_subdirectory(core/ThreadSafeMap)
+add_subdirectory(core/ThreadSafeQueue)
+add_subdirectory(core/ThreadSafeStack)
+
+if (USE_MHOPE)
+    add_subdirectory(libs/MHope)
+endif()
