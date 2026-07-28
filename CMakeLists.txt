@@ -11,17 +11,28 @@ option(BUILD_SHARED_LIBS "Build shared libraries" OFF)
 option(BUILD_TESTING "Build all tests" ON)
 option(BUILD_EXAMPLES "Build eny examples" ON)
 option(USE_MHOPE "Use MHope library (submodule)" ON)
+option(WARNINGS_AS_ERRORS "Warning throws error" ON)
 
 include(cmake/MTECompilerOptions.cmake)
 include(cmake/MTEUtilities.cmake)
 
+if(WARNINGS_AS_ERRORS)
+    target_compile_options(MteCompileOptions
+        INTERFACE
+            $<$<CXX_COMPILER_ID:MSVC>:/WX>
+            $<$<NOT:$<CXX_COMPILER_ID:MSVC>>:-Werror>
+    )
+endif()
+
 # -----------------------dependencies--------------------------
+
 # Testing (GoogleTest)
 if(BUILD_TESTING)
     find_package(GTest REQUIRED)
     enable_testing()
 endif()
 
+# MHope(Unused lib, it has been added for the future)
 if (USE_MHOPE)
     add_subdirectory(libs/MHope)
 endif()
