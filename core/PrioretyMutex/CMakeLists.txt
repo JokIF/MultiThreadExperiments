@@ -1,5 +1,4 @@
 add_mte_public_library_with_settings(PriotexLib src/Priotex.cpp)
-target_compile_definitions(PriotexLib PRIVATE BUILD_TESTING)
 
 if (BUILD_EXAMPLES)
     add_mte_example_with_settings(PriotexExample examples/testExample.cpp)
@@ -7,6 +6,8 @@ if (BUILD_EXAMPLES)
 endif()
 
 if (BUILD_TESTING)
+    target_compile_definitions(PriotexLib PRIVATE BUILD_TESTING)
+
     add_mte_gtest_executable(PriotexTests
         "PriotexLib;MHopeLib"
         tests/CoupleThreadsTests.cpp
