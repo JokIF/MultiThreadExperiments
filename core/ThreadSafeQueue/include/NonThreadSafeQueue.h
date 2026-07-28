@@ -4,7 +4,7 @@
 
 namespace NonThreadSafeStructs
 {
-class EmptyQueue : std::exception {
+class EmptyQueue : public std::exception {
     char const* what() const noexcept override { return "Queue is empty"; }
 };
 

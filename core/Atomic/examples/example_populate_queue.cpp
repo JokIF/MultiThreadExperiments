@@ -5,8 +5,15 @@
 #include <string>
 #include <iostream>
 
-int gl_queue[1000];
-std::atomic<int> len_queue = 0;
+template <typename T, size_t N>
+constexpr size_t array_size(const T (&)[N]) {
+    return N;
+}
+
+using queue_type = unsigned long int;
+
+queue_type gl_queue[1000];
+std::atomic<size_t> len_queue = 0;
 std::string outString;
 std::atomic<bool> need_break = false;
 
@@ -21,17 +28,17 @@ void process_thread_data(const std::string& thread_name, int queue_data)
 
 void populate_queue()
 {
-    size_t gl_queue_size = sizeof(gl_queue) / sizeof(int);
+    size_t gl_queue_size = array_size(gl_queue);
 
     for (size_t i = 0; i < gl_queue_size; i++)
-        gl_queue[i] = i;
+        gl_queue[i] = static_cast<queue_type>(i);
 
     len_queue.store(gl_queue_size, std::memory_order_release);
 }
 
 void read_queue(const std::string& thread_name)
 {
-    int index_queue;
+    size_t index_queue;
     while (true)
     {
         if (index_queue = len_queue.fetch_sub(1, std::memory_order_acquire); index_queue <= 0) {

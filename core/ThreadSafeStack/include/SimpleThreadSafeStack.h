@@ -6,7 +6,7 @@
 
 namespace ThreadSafeStructs
 {
-class EmptyStack : std::exception {
+class EmptyStack : public std::exception {
     const char* what() const noexcept override;
 };
 
