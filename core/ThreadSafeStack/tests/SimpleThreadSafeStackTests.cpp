@@ -50,8 +50,8 @@ TEST(SimpleThreadSafeStack, ThrowableCopyingTest)
 
         ThrowOnCopy(int someValue) : someValue(someValue) {}
 
-        ThrowOnCopy(const ThrowOnCopy& other) { throw std::logic_error("It can not copy"); }
-        ThrowOnCopy& operator=(const ThrowOnCopy& other) { throw std::logic_error("It can not copy"); }
+        ThrowOnCopy(const ThrowOnCopy&) { throw std::logic_error("It can not copy"); }
+        ThrowOnCopy& operator=(const ThrowOnCopy&) { throw std::logic_error("It can not copy"); }
         
         ThrowOnCopy(ThrowOnCopy&&) noexcept = default;
         ThrowOnCopy& operator=(ThrowOnCopy&&) noexcept = default;

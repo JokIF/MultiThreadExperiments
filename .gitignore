@@ -1,3 +1,8 @@
 .vscode
+.venv
+env
+
 build
+Testing
+CMakeUserPresets.json
 *.exe

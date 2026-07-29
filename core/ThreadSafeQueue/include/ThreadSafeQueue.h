@@ -60,7 +60,7 @@ bool ThreadSafeQueue<T>::empty() const
 }
 
 template <typename T>
-bool ThreadSafeQueue<T>::empty_locked_head(const std::unique_lock<std::mutex>& head_lock) const
+bool ThreadSafeQueue<T>::empty_locked_head([[maybe_unused]] const std::unique_lock<std::mutex>& head_lock) const
 {
     std::lock_guard tail_lock(tail_mtx);
     return head_node.get() == tail_node;

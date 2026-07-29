@@ -54,7 +54,7 @@ TEST(PriotexTest, CorrectMultiThreadUsing)
             std::lock_guard lock(outerMainLoopPtx);
 
             // work with other shared memory space
-            auto&& overallSum = GetOverallSummation();
+            [[maybe_unused]] auto&& overallSum = GetOverallSummation();
             // end work with other shared memory space
         }
     };
