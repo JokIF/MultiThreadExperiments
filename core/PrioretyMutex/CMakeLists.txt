@@ -9,7 +9,7 @@ if (BUILD_TESTING)
     target_compile_definitions(PriotexLib PRIVATE BUILD_TESTING)
 
     add_mte_gtest_executable(PriotexTests
-        "PriotexLib;MHopeLib"
+        "PriotexLib"
         tests/CoupleThreadsTests.cpp
         tests/OneThreadTests.cpp
     )

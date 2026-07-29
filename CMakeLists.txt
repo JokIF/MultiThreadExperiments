@@ -10,7 +10,7 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 option(BUILD_SHARED_LIBS "Build shared libraries" OFF)
 option(BUILD_TESTING "Build all tests" ON)
 option(BUILD_EXAMPLES "Build eny examples" ON)
-option(USE_MHOPE "Use MHope library (submodule)" ON)
+option(USE_MHOPE "Use MHope library (submodule)" OFF)
 option(WARNINGS_AS_ERRORS "Warning throws error" ON)
 
 include(cmake/MTECompilerOptions.cmake)

@@ -35,7 +35,7 @@ function(add_mte_gtest_executable TARGET_NAME LIBS_NAMES)
     add_executable(${TARGET_NAME} ${ARGN})
     target_link_libraries(${TARGET_NAME} 
         PRIVATE 
-            gtest_main
+            GTest::gtest_main
             MteCompileOptions
             ${LIBS_NAMES}
     )
