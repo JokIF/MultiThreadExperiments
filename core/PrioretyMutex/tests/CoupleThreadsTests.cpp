@@ -71,16 +71,6 @@ TEST(PriotexTest, CorrectMultiThreadUsing)
     EXPECT_EQ(GetOverallSummation(), expectedOverallSummation);
 }
 
-TEST(PriotexTest, ThreadLauncher) //need to move in other subdir
-{
-    threadWorks::ThreadLauncher tl;
-    EXPECT_EQ(tl.GetThreadCount(), 0);
-    auto th1 = tl.CreateThread([] { for (size_t i = 0; i < 1000; i++); });
-    EXPECT_EQ(tl.GetThreadCount(), 1);
-    th1.join();
-    EXPECT_EQ(tl.GetThreadCount(), 0);
-}
-
 TEST(PriotexTest, TryLockMultiThreadUsing) //In doubt
 {
     unsigned int GlobalCounter = 0;
