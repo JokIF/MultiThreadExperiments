@@ -2,14 +2,7 @@
 #include <mutex>
 #include <limits>
 
-#ifdef BUILD_TESTING
-#include <memory>
-
-namespace unitTests
-{
-class UnitTestDataPriotex;
-}
-#endif
+namespace unitTests { class UnitTestDataPriotex; }
 
 namespace mutex
 {
@@ -39,11 +32,6 @@ private:
     Priorety        m_prevPrioretyValue;
     inline static thread_local Priorety   m_thisThreadPrioretyValue = std::numeric_limits<Priorety>::max();
 
-#ifdef BUILD_TESTING
     friend class unitTests::UnitTestDataPriotex;
-
-public:
-    std::unique_ptr<unitTests::UnitTestDataPriotex> GetTestWrapper() const;
-#endif
 };
 }

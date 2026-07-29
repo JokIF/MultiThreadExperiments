@@ -1,7 +1,4 @@
 #include "Priotex.h"
-#ifdef BUILD_TESTING
-#include "../tests/PriotexTestUtils.h"
-#endif
 
 namespace mutex
 {   
@@ -39,11 +36,4 @@ bool Priotex::try_lock()
     UpdatePriorety();
     return true;
 }
-
-#ifdef BUILD_TESTING
-std::unique_ptr<unitTests::UnitTestDataPriotex> Priotex::GetTestWrapper() const
-{
-    return std::make_unique<unitTests::UnitTestDataPriotex>(*this);
-}
-#endif
 }
