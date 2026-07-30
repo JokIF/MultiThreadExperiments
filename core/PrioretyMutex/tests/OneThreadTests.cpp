@@ -12,15 +12,15 @@ TEST(PriotexTest, CorrectTwoPriotexLock)
     UnitTestDataPriotex firstPtxTestWrapper(firstPtx);
     UnitTestDataPriotex secondPtxTestWrapper(secondPtx);
 
-    EXPECT_EQ(firstPtxTestWrapper.GetPriotexPriorety(), 10);
-    EXPECT_EQ(secondPtxTestWrapper.GetPriotexPriorety(), 8);
+    EXPECT_EQ(firstPtxTestWrapper.GetPriotexPriority(), 10);
+    EXPECT_EQ(secondPtxTestWrapper.GetPriotexPriority(), 8);
 
     EXPECT_NO_THROW(firstPtx.lock());
-    EXPECT_EQ(firstPtxTestWrapper.GetCurrentThreadPriorety(), 10);
+    EXPECT_EQ(firstPtxTestWrapper.GetCurrentThreadPriority(), 10);
     
     EXPECT_NO_THROW(secondPtx.lock());
-    EXPECT_EQ(secondPtxTestWrapper.GetCurrentThreadPriorety(), 8);
-    EXPECT_EQ(secondPtxTestWrapper.GetLastPriorety(), 10);
+    EXPECT_EQ(secondPtxTestWrapper.GetCurrentThreadPriority(), 8);
+    EXPECT_EQ(secondPtxTestWrapper.GetLastPriority(), 10);
 
     secondPtx.unlock();
     firstPtx.unlock();
@@ -35,9 +35,9 @@ TEST(PriotexTest, CorrectTwoPriotexUnLock)
     firstPtx.lock();
     secondPtx.lock();
 
-    EXPECT_EQ(secondPtxTestWrapper.GetCurrentThreadPriorety(), 1);
+    EXPECT_EQ(secondPtxTestWrapper.GetCurrentThreadPriority(), 1);
     EXPECT_NO_THROW(secondPtx.unlock());
-    EXPECT_EQ(secondPtxTestWrapper.GetCurrentThreadPriorety(), 2);
+    EXPECT_EQ(secondPtxTestWrapper.GetCurrentThreadPriority(), 2);
     EXPECT_NO_THROW(firstPtx.unlock());
 }
 
@@ -48,7 +48,7 @@ TEST(PriotexTest, UncorrectTwoPriotexLock)
     UnitTestDataPriotex secondPtxTestWrapper(secondPtx);
 
     EXPECT_NO_THROW(secondPtx.lock());
-    EXPECT_EQ(secondPtxTestWrapper.GetCurrentThreadPriorety(), 100);
+    EXPECT_EQ(secondPtxTestWrapper.GetCurrentThreadPriority(), 100);
     EXPECT_THROW(firstPtx.lock(), std::logic_error);
-    EXPECT_EQ(secondPtxTestWrapper.GetCurrentThreadPriorety(), 100);
+    EXPECT_EQ(secondPtxTestWrapper.GetCurrentThreadPriority(), 100);
 }
