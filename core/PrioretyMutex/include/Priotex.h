@@ -11,7 +11,7 @@ class Priotex
 public:
     using Priority = unsigned long;
 
-    constexpr explicit Priotex(Priority value) : m_PriorityValue(value) {}
+    constexpr explicit Priotex(Priority value) : m_priorityValue(value) {}
 
     Priotex(const Priotex&) = delete;
     Priotex(Priotex&&) = delete;
@@ -28,7 +28,7 @@ private:
 
     std::mutex      m_innerMutex;
 
-    const Priority  m_PriorityValue;
+    const Priority  m_priorityValue;
     Priority        m_prevPriorityValue;
     inline static thread_local Priority   m_thisThreadPriorityValue = std::numeric_limits<Priority>::max();
 

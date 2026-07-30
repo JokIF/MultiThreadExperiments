@@ -19,11 +19,10 @@ public:
     ThreadSafeQueue() 
         : head_node(std::make_unique<Node>()), tail_node(head_node.get()) {}
 
-    ThreadSafeQueue(ThreadSafeQueue&&) noexcept = default;
-
+    ThreadSafeQueue(ThreadSafeQueue&&) = delete;
     ThreadSafeQueue(const ThreadSafeQueue&) = delete;
     ThreadSafeQueue& operator=(const ThreadSafeQueue&) = delete;
-    ThreadSafeQueue& operator=(ThreadSafeQueue&&) noexcept = delete;
+    ThreadSafeQueue& operator=(ThreadSafeQueue&&) = delete;
 
     void    push(T value);
 

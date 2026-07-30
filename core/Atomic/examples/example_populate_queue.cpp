@@ -13,7 +13,7 @@ constexpr size_t array_size(const T (&)[N]) {
 using queue_type = unsigned long int;
 
 queue_type gl_queue[1000];
-std::atomic<size_t> len_queue = 0;
+std::atomic<long> len_queue = 0;
 std::string outString;
 std::atomic<bool> need_break = false;
 
@@ -33,22 +33,28 @@ void populate_queue()
     for (size_t i = 0; i < gl_queue_size; i++)
         gl_queue[i] = static_cast<queue_type>(i);
 
-    len_queue.store(gl_queue_size, std::memory_order_release);
+    len_queue.store(static_cast<long>(gl_queue_size), std::memory_order_release);
 }
 
 void read_queue(const std::string& thread_name)
 {
-    size_t index_queue;
+    long index_queue;
     while (true)
     {
-        if (index_queue = len_queue.fetch_sub(1, std::memory_order_acquire); index_queue <= 0) {
-            if (index_queue < -1000000) len_queue.store(0, std::memory_order_relaxed);
-            if (need_break.load()) break;
-            std::this_thread::sleep_for(std::chrono::microseconds(1));
+        index_queue = len_queue.fetch_sub(1, std::memory_order_acquire);
+        if (index_queue <= 0)
+        {
+            if (index_queue < 0)
+                len_queue.store(0, std::memory_order_relaxed);
+
+            if (need_break.load())
+                break;
+
+            std::this_thread::yield();
             continue;
         }
 
-        process_thread_data(thread_name, gl_queue[index_queue-1]);
+        process_thread_data(thread_name, gl_queue[static_cast<size_t>(index_queue) - 1]);
     }
 }
 

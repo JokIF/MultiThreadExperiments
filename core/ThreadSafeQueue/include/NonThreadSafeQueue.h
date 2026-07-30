@@ -20,11 +20,10 @@ class NonThreadSafeQueue
 public:
     NonThreadSafeQueue() = default;
     
-    NonThreadSafeQueue(NonThreadSafeQueue&&) noexcept = default;
-
+    NonThreadSafeQueue(NonThreadSafeQueue&&) = delete;
     NonThreadSafeQueue(const NonThreadSafeQueue&) = delete;
     NonThreadSafeQueue& operator=(const NonThreadSafeQueue&) = delete;
-    NonThreadSafeQueue& operator=(NonThreadSafeQueue&&) noexcept = delete;
+    NonThreadSafeQueue& operator=(NonThreadSafeQueue&&) = delete;
 
     void push(T value);
     T pop();

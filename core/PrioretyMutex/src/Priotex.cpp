@@ -5,12 +5,12 @@ namespace mutex
 void Priotex::UpdatePriority() noexcept
 {
     m_prevPriorityValue = m_thisThreadPriorityValue;
-    m_thisThreadPriorityValue = m_PriorityValue;
+    m_thisThreadPriorityValue = m_priorityValue;
 }
 
 void Priotex::CheckPriority() const
 {    
-    if (m_PriorityValue >= m_thisThreadPriorityValue)
+    if (m_priorityValue >= m_thisThreadPriorityValue)
         throw std::logic_error("incorrect order by Priority");
 }
 
