@@ -36,12 +36,12 @@ public:
     bool    empty() const;
 
 private:
-    bool    empty_locked_head(const std::unique_lock<std::mutex>& head_lock) const;
+    bool    empty_locked_head(const std::unique_lock<std::mutex>& head_lock);
     void    push_tail(std::shared_ptr<T> new_data);
 
     std::unique_ptr<Node>           pop_head();
 
-    std::unique_lock<std::mutex>    wait_data() const;
+    std::unique_lock<std::mutex>    wait_data();
 
     std::unique_ptr<Node>   head_node;
     Node*                   tail_node;
@@ -49,7 +49,7 @@ private:
     mutable std::mutex      head_mtx;
     mutable std::mutex      tail_mtx;
 
-    mutable std::condition_variable cv;
+    std::condition_variable cv;
 };
 
 template <typename T>
@@ -60,7 +60,7 @@ bool ThreadSafeQueue<T>::empty() const
 }
 
 template <typename T>
-bool ThreadSafeQueue<T>::empty_locked_head([[maybe_unused]] const std::unique_lock<std::mutex>& head_lock) const
+bool ThreadSafeQueue<T>::empty_locked_head([[maybe_unused]] const std::unique_lock<std::mutex>& head_lock)
 {
     std::lock_guard tail_lock(tail_mtx);
     return head_node.get() == tail_node;
@@ -87,7 +87,7 @@ void ThreadSafeQueue<T>::push_tail(const std::shared_ptr<T> new_data)
 }
 
 template <typename T>
-std::unique_lock<std::mutex> ThreadSafeQueue<T>::wait_data() const
+std::unique_lock<std::mutex> ThreadSafeQueue<T>::wait_data()
 {
     std::unique_lock lock(head_mtx);
     cv.wait(lock, [&] { return !empty_locked_head(lock); });

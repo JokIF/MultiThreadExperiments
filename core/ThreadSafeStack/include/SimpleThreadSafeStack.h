@@ -28,7 +28,8 @@ public:
     std::shared_ptr<T> pop();
     void pop(T& value);
 
-    size_t empty() const;
+    bool empty() const;
+
 private:
     std::stack<T> main_stack;
     mutable std::mutex mtx;
@@ -63,7 +64,7 @@ void SimpleThreadSafeStack<T>::pop(T& value)
 }
 
 template <typename T>
-size_t SimpleThreadSafeStack<T>::empty() const 
+bool SimpleThreadSafeStack<T>::empty() const
 {
     std::lock_guard lock(mtx);
     return main_stack.empty();
