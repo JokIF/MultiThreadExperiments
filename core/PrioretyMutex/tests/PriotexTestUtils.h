@@ -1,5 +1,4 @@
 #pragma once
-#ifdef BUILD_TESTING
 #include "Priotex.h"
 
 namespace unitTests
@@ -7,15 +6,13 @@ namespace unitTests
 class UnitTestDataPriotex
 {
 public:
-    UnitTestDataPriotex(const mutex::Priotex& ptx) : ptx(ptx) {}
+    explicit UnitTestDataPriotex(const mutex::Priotex& ptx) : ptx(ptx) {}
 
-    mutex::Priotex::Priorety GetPriotexPriorety() const { return ptx.m_prioretyValue; }
-    mutex::Priotex::Priorety GetLastPriorety() const { return ptx.m_prevPrioretyValue; }
-    mutex::Priotex::Priorety GetCurrentThreadPriorety() const { return ptx.m_thisThreadPrioretyValue; }
+    mutex::Priotex::Priority GetPriotexPriority() const { return ptx.m_PriorityValue; }
+    mutex::Priotex::Priority GetLastPriority() const { return ptx.m_prevPriorityValue; }
+    mutex::Priotex::Priority GetCurrentThreadPriority() const { return ptx.m_thisThreadPriorityValue; }
 
 private:
     const mutex::Priotex& ptx;
 };
 }
-
-#endif

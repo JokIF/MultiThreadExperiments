@@ -2,23 +2,16 @@
 #include <mutex>
 #include <limits>
 
-#ifdef BUILD_TESTING
-#include <memory>
-
-namespace unitTests
-{
-class UnitTestDataPriotex;
-}
-#endif
+namespace unitTests { class UnitTestDataPriotex; }
 
 namespace mutex
 {
 class Priotex
 {
 public:
-    using Priorety = unsigned long;
+    using Priority = unsigned long;
 
-    constexpr explicit Priotex(Priorety value) : m_prioretyValue(value) {}
+    constexpr explicit Priotex(Priority value) : m_PriorityValue(value) {}
 
     Priotex(const Priotex&) = delete;
     Priotex(Priotex&&) = delete;
@@ -30,20 +23,15 @@ public:
     bool    try_lock();
 
 private:
-    void    UpdatePriorety() noexcept;
-    void    CheckPriorety() const;
+    void    UpdatePriority() noexcept;
+    void    CheckPriority() const;
 
     std::mutex      m_innerMutex;
 
-    const Priorety  m_prioretyValue;
-    Priorety        m_prevPrioretyValue;
-    inline static thread_local Priorety   m_thisThreadPrioretyValue = std::numeric_limits<Priorety>::max();
+    const Priority  m_PriorityValue;
+    Priority        m_prevPriorityValue;
+    inline static thread_local Priority   m_thisThreadPriorityValue = std::numeric_limits<Priority>::max();
 
-#ifdef BUILD_TESTING
     friend class unitTests::UnitTestDataPriotex;
-
-public:
-    std::unique_ptr<unitTests::UnitTestDataPriotex> GetTestWrapper() const;
-#endif
 };
 }

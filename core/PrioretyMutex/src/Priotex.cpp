@@ -1,49 +1,39 @@
 #include "Priotex.h"
-#ifdef BUILD_TESTING
-#include "../tests/PriotexTestUtils.h"
-#endif
 
 namespace mutex
 {   
-void Priotex::UpdatePriorety() noexcept
+void Priotex::UpdatePriority() noexcept
 {
-    m_prevPrioretyValue = m_thisThreadPrioretyValue;
-    m_thisThreadPrioretyValue = m_prioretyValue;
+    m_prevPriorityValue = m_thisThreadPriorityValue;
+    m_thisThreadPriorityValue = m_PriorityValue;
 }
 
-void Priotex::CheckPriorety() const
+void Priotex::CheckPriority() const
 {    
-    if (m_prioretyValue >= m_thisThreadPrioretyValue)
-        throw std::logic_error("incorrect order by priorety");
+    if (m_PriorityValue >= m_thisThreadPriorityValue)
+        throw std::logic_error("incorrect order by Priority");
 }
 
 void Priotex::lock()
 {
-    CheckPriorety();
+    CheckPriority();
     m_innerMutex.lock();
-    UpdatePriorety();
+    UpdatePriority();
 }
 
 void Priotex::unlock()
 {
-    m_thisThreadPrioretyValue = m_prevPrioretyValue;
+    m_thisThreadPriorityValue = m_prevPriorityValue;
     m_innerMutex.unlock();
 }
 
 bool Priotex::try_lock()
 {
-    CheckPriorety();
+    CheckPriority();
     if (!m_innerMutex.try_lock())
         return false;
 
-    UpdatePriorety();
+    UpdatePriority();
     return true;
 }
-
-#ifdef BUILD_TESTING
-std::unique_ptr<unitTests::UnitTestDataPriotex> Priotex::GetTestWrapper() const
-{
-    return std::make_unique<unitTests::UnitTestDataPriotex>(*this);
-}
-#endif
 }
