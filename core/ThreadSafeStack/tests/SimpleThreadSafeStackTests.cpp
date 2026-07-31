@@ -109,7 +109,7 @@ TEST(SimpleThreadSafeStack, MultiThreadWorkTest)
             if (auto value = stack.try_pop(); value.has_value())
                 outSum.fetch_add(*value, std::memory_order_relaxed);
             else
-                writters_done.wait(writer_count, std::memory_order_relaxed);
+                writters_done.wait(writer_count, std::memory_order_relaxed); // If there are more readers, the wait could become endless
     };
 
     std::vector<std::jthread> pool;
