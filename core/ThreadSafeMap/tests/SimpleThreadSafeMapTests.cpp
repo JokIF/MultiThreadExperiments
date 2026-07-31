@@ -3,6 +3,9 @@
 #include <thread>
 #include <chrono>
 #include <string>
+#include <vector>
+#include <latch>
+#include <atomic>
 
 using namespace std::chrono_literals;
 
@@ -34,15 +37,19 @@ constexpr int calculate_expected_value(int iter_count)
 TEST(SimpleThreadSafeMap, MultiThreadTest)
 {
     ThreadSafeStructs::SimpleThreadSafeMap<std::string, int> threadSafeMap;
-    
-    auto addPair = [&threadSafeMap](std::string name, int value, std::chrono::milliseconds duration_time)
+    constexpr int total_threads = 6;
+    std::latch start(total_threads);
+
+    auto addPair = [&start, &threadSafeMap](std::string name, int value, std::chrono::milliseconds duration_time)
     {
+        start.arrive_and_wait();
         std::this_thread::sleep_for(duration_time);
         threadSafeMap.set_or_update_value(name, value);
     };
 
-    auto readAndDecrease = [&threadSafeMap](std::string name, int& out)
+    auto readAndDecrease = [&start, &threadSafeMap](std::string name, int& out)
     {
+        start.arrive_and_wait();
         for (;;) 
         {
             if (auto value = threadSafeMap.get_value(name); !value.has_value())
@@ -63,21 +70,18 @@ TEST(SimpleThreadSafeMap, MultiThreadTest)
     int second_out = 0;
     int third_out = 0;
     
-    {
-        std::jthread reader_first(readAndDecrease, "first", std::ref(first_out));
-        std::jthread reader_second(readAndDecrease, "second", std::ref(second_out));
-        std::jthread reader_third(readAndDecrease, "third", std::ref(third_out));
+    std::vector<std::jthread> pool;
+    pool.reserve(total_threads);
+    pool.emplace_back(readAndDecrease, "first", std::ref(first_out));
+    pool.emplace_back(readAndDecrease, "second", std::ref(second_out));
+    pool.emplace_back(readAndDecrease, "third", std::ref(third_out));
+    pool.emplace_back(addPair, "first", 1000, 100ms);
+    pool.emplace_back(addPair, "second", 500, 300ms);
+    pool.emplace_back(addPair, "third", 200, 500ms);
 
-        std::jthread writter_first(addPair, "first", 1000, 100ms);
-        std::jthread writter_second(addPair, "second", 500, 300ms);
-        std::jthread writter_third(addPair, "third", 200, 500ms);
-    }
+    pool.clear();
 
-    constexpr int first_expected = calculate_expected_value(1000);
-    constexpr int second_expected = calculate_expected_value(500);
-    constexpr int third_expected = calculate_expected_value(200);
-
-    EXPECT_EQ(first_out, first_expected);
-    EXPECT_EQ(second_out, second_expected);
-    EXPECT_EQ(third_out, third_expected);
+    EXPECT_EQ(first_out, calculate_expected_value(1000));
+    EXPECT_EQ(second_out, calculate_expected_value(500));
+    EXPECT_EQ(third_out, calculate_expected_value(200));
 }
