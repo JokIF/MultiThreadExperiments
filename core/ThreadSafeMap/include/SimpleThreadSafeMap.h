@@ -4,9 +4,12 @@
 #include <shared_mutex>
 #include <vector>
 #include <algorithm>
+#include <expected>
 
 namespace ThreadSafeStructs
 {
+enum class MapError { NotFound };
+
 template <typename Key, typename Value, typename Hash = std::hash<Key>>
 class SimpleThreadSafeMap
 {
@@ -20,9 +23,9 @@ class SimpleThreadSafeMap
 
         bucket_type() = default;
 
-        Value       get_elem_for(const Key& key, const Value& default_value) const;
-        void        set_or_update_elem_for(const Key& key, const Value& value);
-        size_type   remove_elem_for(const Key& key)
+        std::expected<Value, MapError>  get(const Key& key) const;
+        void        set_or_update(const Key& key, const Value& value);
+        size_type   remove_elem(const Key& key)
         {
             std::unique_lock lock(mtx);
             return bucket.remove_if([&](const bucket_elem& elem) { return elem.first == key; });
@@ -30,7 +33,7 @@ class SimpleThreadSafeMap
 
     private:
         template<typename Self>
-        decltype(auto)    find_elem_for(this Self&& self, const Key& key) {
+        decltype(auto)    find_elem(this Self&& self, const Key& key) {
             return std::find_if(self.bucket.begin(), self.bucket.end(), [&](const bucket_elem& elem) { return elem.first == key; });
         }
 
@@ -47,9 +50,9 @@ public:
     SimpleThreadSafeMap& operator=(SimpleThreadSafeMap&&) = delete;
 
 
-    Value   value_for(const Key& key, const Value& default_value = Value()) const;
-    void    set_or_update_value_for(const Key& key, const Value& value);
-    bucket_type::size_type  remove_value_for(const Key& key);
+    std::expected<Value, MapError>   get_value(const Key& key) const;
+    void    set_or_update_value(const Key& key, const Value& value);
+    bucket_type::size_type  remove_value(const Key& key);
 
 private:
     template <typename Self>
@@ -71,43 +74,42 @@ SimpleThreadSafeMap<Key, Value, Hash>::SimpleThreadSafeMap(size_t bucket_size, H
 }
 
 template <typename Key, typename Value, typename Hash>
-Value SimpleThreadSafeMap<Key, Value, Hash>::bucket_type::get_elem_for(const Key& key, const Value& default_value) const
+std::expected<Value, MapError> SimpleThreadSafeMap<Key, Value, Hash>::bucket_type::get(const Key& key) const
 {
     std::shared_lock lock(mtx);
-    const auto&& iter = find_elem_for(key);
+    const auto&& iter = find_elem(key);
     if (iter == bucket.end())
-        return default_value;
+        return std::unexpected(MapError::NotFound);
 
     return iter->second;
 }
 
 template <typename Key, typename Value, typename Hash>
-void SimpleThreadSafeMap<Key, Value, Hash>::bucket_type::set_or_update_elem_for(const Key& key, const Value& value)
+void SimpleThreadSafeMap<Key, Value, Hash>::bucket_type::set_or_update(const Key& key, const Value& value)
 {
     std::unique_lock lock(mtx);
-    auto&& iter = find_elem_for(key);
+    auto&& iter = find_elem(key);
     if (iter != bucket.end())
         iter->second = value;
     else
         bucket.emplace_back(key, value);
-    
 }
 
 template <typename Key, typename Value, typename Hash>
-Value SimpleThreadSafeMap<Key, Value, Hash>::value_for(const Key& key, const Value& default_value) const
+std::expected<Value, MapError> SimpleThreadSafeMap<Key, Value, Hash>::get_value(const Key& key) const
 {
-    return get_bucket(key).get_elem_for(key, default_value);
+    return get_bucket(key).get(key);
 }
 
 template <typename Key, typename Value, typename Hash>
-void SimpleThreadSafeMap<Key, Value, Hash>::set_or_update_value_for(const Key& key, const Value& value)
+void SimpleThreadSafeMap<Key, Value, Hash>::set_or_update_value(const Key& key, const Value& value)
 {
-    return get_bucket(key).set_or_update_elem_for(key, value);
+    return get_bucket(key).set_or_update(key, value);
 }
 
 template <typename Key, typename Value, typename Hash>
-SimpleThreadSafeMap<Key, Value, Hash>::bucket_type::size_type SimpleThreadSafeMap<Key, Value, Hash>::remove_value_for(const Key& key)
+SimpleThreadSafeMap<Key, Value, Hash>::bucket_type::size_type SimpleThreadSafeMap<Key, Value, Hash>::remove_value(const Key& key)
 {
-    return get_bucket(key).remove_elem_for(key);
+    return get_bucket(key).remove_elem(key);
 }
 }

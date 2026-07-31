@@ -9,18 +9,21 @@ using namespace std::chrono_literals;
 TEST(SimpleThreadSafeMap, SingleThreadMethodsTest)
 {
     ThreadSafeStructs::SimpleThreadSafeMap<std::string, int> m;
-    int value_empty = 0;
-    m.set_or_update_value_for("first", 10);
-    m.set_or_update_value_for("second", 200);
-    m.set_or_update_value_for("third", 3000);
-    EXPECT_EQ(m.value_for("first"), 10);
-    EXPECT_EQ(m.value_for("second"), 200);
-    EXPECT_EQ(m.value_for("third"), 3000);
-    m.set_or_update_value_for("first", 40000);
-    EXPECT_EQ(m.value_for("first"), 40000);
-    EXPECT_EQ(m.remove_value_for("second"), 1);
-    EXPECT_EQ(m.remove_value_for("second"), 0);
-    EXPECT_EQ(m.value_for("second", value_empty), value_empty);
+
+    m.set_or_update_value("first", 10);
+    m.set_or_update_value("second", 200);
+    m.set_or_update_value("third", 3000);
+    EXPECT_EQ(*m.get_value("first"), 10);
+    EXPECT_EQ(*m.get_value("second"), 200);
+    EXPECT_EQ(*m.get_value("third"), 3000);
+    m.set_or_update_value("first", 40000);
+    EXPECT_EQ(*m.get_value("first"), 40000);
+    EXPECT_EQ(m.remove_value("second"), 1);
+    EXPECT_EQ(m.remove_value("second"), 0);
+
+    auto value = m.get_value("second");
+    EXPECT_FALSE(value.has_value());
+    EXPECT_EQ(value.error(), ThreadSafeStructs::MapError::NotFound);
 }
 
 constexpr int calculate_expected_value(int iter_count)
@@ -35,24 +38,23 @@ TEST(SimpleThreadSafeMap, MultiThreadTest)
     auto addPair = [&threadSafeMap](std::string name, int value, std::chrono::milliseconds duration_time)
     {
         std::this_thread::sleep_for(duration_time);
-        threadSafeMap.set_or_update_value_for(name, value);
+        threadSafeMap.set_or_update_value(name, value);
     };
 
     auto readAndDecrease = [&threadSafeMap](std::string name, int& out)
     {
         for (;;) 
         {
-            int value = threadSafeMap.value_for(name, -1);
-            if (value == -1)
+            if (auto value = threadSafeMap.get_value(name); !value.has_value())
                 std::this_thread::yield();
 
-            else if (value == 0)
+            else if (*value == 0)
                 break;
 
             else
             {
-                out += value;
-                threadSafeMap.set_or_update_value_for(name, value - 1);
+                out += *value;
+                threadSafeMap.set_or_update_value(name, *value - 1);
             }
         }
     };
