@@ -16,12 +16,14 @@ TEST(SimpleThreadSafeStack, SingleThreadCorrectUsingMethodsTest)
 
     EXPECT_FALSE(firstStack.empty());
 
-    EXPECT_EQ(*firstStack.pop(), 200);
+    auto first_value = firstStack.try_pop();
+    EXPECT_TRUE(first_value.has_value());
+    EXPECT_EQ(*first_value, 200);
 
     ThreadSafeStructs::SimpleThreadSafeStack<int> secondStack(firstStack);
 
-    int stack_value = 3000;
-    secondStack.pop(stack_value);
+    int stack_value = 0;
+    EXPECT_TRUE(secondStack.try_pop(stack_value));
     EXPECT_EQ(stack_value, 10);
 
     EXPECT_TRUE(secondStack.empty());
@@ -35,10 +37,12 @@ TEST(SimpleThreadSafeStack, EmptyStackPopTest)
     ASSERT_TRUE(stack.empty());
 
     stack.push(10);
-    stack.pop();
+    (void)stack.try_pop();
 
     ASSERT_TRUE(stack.empty());
-    EXPECT_THROW(stack.pop(), ThreadSafeStructs::EmptyStack);
+    auto value = stack.try_pop();
+    EXPECT_FALSE(value.has_value());
+    EXPECT_EQ(value.error(), ThreadSafeStructs::StackError::Empty);
     EXPECT_TRUE(stack.empty());
 }
 
@@ -46,8 +50,9 @@ TEST(SimpleThreadSafeStack, ThrowableCopyingTest)
 {
     struct ThrowOnCopy
     {
-        int someValue;
+        int someValue = 0;
 
+        ThrowOnCopy() = default;
         ThrowOnCopy(int someValue) : someValue(someValue) {}
 
         ThrowOnCopy(const ThrowOnCopy&) { throw std::logic_error("It can not copy"); }
@@ -62,13 +67,14 @@ TEST(SimpleThreadSafeStack, ThrowableCopyingTest)
     EXPECT_NO_THROW(stack.push(0));
     EXPECT_NO_THROW(stack.push(10));
 
-    std::shared_ptr<ThrowOnCopy> firstValue;
+    std::expected<ThrowOnCopy, ThreadSafeStructs::StackError> firstValue;
 
-    EXPECT_NO_THROW(firstValue = stack.pop());
+    EXPECT_NO_THROW(firstValue = stack.try_pop());
+    EXPECT_TRUE(firstValue.has_value());
     EXPECT_EQ(firstValue->someValue, 10);
 
     ThrowOnCopy secondValue(200);
-    EXPECT_NO_THROW(stack.pop(secondValue));
+    EXPECT_NO_THROW(stack.try_pop(secondValue));
     EXPECT_EQ(secondValue.someValue, 0);
     ASSERT_TRUE(stack.empty());
 }
@@ -96,13 +102,11 @@ TEST(SimpleThreadSafeStack, MultiThreadWorkTest)
     {
         while (!go.load()) std::this_thread::yield();
 
-        std::shared_ptr<int> stackValue = nullptr;
         while (write_in_progress.load(std::memory_order_acquire) != 2 || !stack.empty())
-            try {
-                sumFromStack += *stack.pop();
-            } catch(ThreadSafeStructs::EmptyStack&) { 
+            if (auto value = stack.try_pop(); value.has_value())
+                sumFromStack += *value;
+            else
                 std::this_thread::yield(); 
-            }
     };
 
     std::thread tFirstWrite(WriteStack, true);
