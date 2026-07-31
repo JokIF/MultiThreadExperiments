@@ -1,3 +1,4 @@
+#include <format>
 #include "Priotex.h"
 
 namespace mutex
@@ -8,15 +9,23 @@ void Priotex::UpdatePriority() noexcept
     m_thisThreadPriorityValue = m_priorityValue;
 }
 
-void Priotex::CheckPriority() const
+void Priotex::CheckPriority(std::source_location loc) const
 {    
-    if (m_priorityValue >= m_thisThreadPriorityValue)
-        throw std::logic_error("incorrect order by Priority");
+    if (m_priorityValue < m_thisThreadPriorityValue)
+        return;
+
+    auto msg = std::format(
+        "Priority violation at {}:{} — attempted lock with priority {} while thread holds {}",
+        loc.file_name(), loc.line(),
+        m_priorityValue,
+        m_thisThreadPriorityValue
+    );
+    throw std::logic_error(msg);
 }
 
-void Priotex::lock()
+void Priotex::lock(std::source_location loc)
 {
-    CheckPriority();
+    CheckPriority(loc);
     m_innerMutex.lock();
     UpdatePriority();
 }
@@ -27,9 +36,9 @@ void Priotex::unlock()
     m_innerMutex.unlock();
 }
 
-bool Priotex::try_lock()
+bool Priotex::try_lock(std::source_location loc)
 {
-    CheckPriority();
+    CheckPriority(loc);
     if (!m_innerMutex.try_lock())
         return false;
 

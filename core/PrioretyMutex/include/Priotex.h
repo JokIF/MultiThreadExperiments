@@ -1,6 +1,7 @@
 #pragma once
 #include <mutex>
 #include <limits>
+#include <source_location>
 
 namespace unitTests { class UnitTestDataPriotex; }
 
@@ -11,20 +12,20 @@ class Priotex
 public:
     using Priority = unsigned long;
 
-    constexpr explicit Priotex(Priority value) : m_priorityValue(value) {}
+    explicit Priotex(Priority value) : m_priorityValue(value) {}
 
     Priotex(const Priotex&) = delete;
     Priotex(Priotex&&) = delete;
     Priotex& operator=(const Priotex&) = delete;
     Priotex& operator=(Priotex&&) = delete;
 
-    void    lock();
+    void    lock(std::source_location loc = std::source_location::current());
     void    unlock();
-    bool    try_lock();
+    bool    try_lock(std::source_location loc = std::source_location::current());
 
 private:
     void    UpdatePriority() noexcept;
-    void    CheckPriority() const;
+    void    CheckPriority(std::source_location loc) const;
 
     std::mutex      m_innerMutex;
 

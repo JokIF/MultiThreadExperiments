@@ -1,7 +1,7 @@
 add_mte_public_library_with_settings(PriotexLib src/Priotex.cpp)
 
 if (BUILD_EXAMPLES)
-    add_mte_example_with_settings(PriotexExample examples/testExample.cpp)
+    add_mte_example_with_settings(PriotexExample examples/priorety_conflict_with_source_loc.cpp)
     target_link_libraries(PriotexExample PRIVATE PriotexLib)
 endif()
 
