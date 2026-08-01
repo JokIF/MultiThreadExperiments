@@ -4,139 +4,127 @@
 #include <thread>
 #include <future>
 #include <chrono>
+#include <latch>
+#include <atomic>
+#include <ranges>
 
 using namespace std::chrono_literals;
 
 TEST(PriotexTest, CorrectMultiThreadUsing)
 {
-    long long unsigned int overallSummation = 0;
-    mutex::Priotex deepestSumPtx(10);
+    long long unsigned int overall = 0;
+    mutex::Priotex deepest_ptx(10);
         
 
-    auto OverallSum = [&overallSummation, &deepestSumPtx](unsigned int toSumValue) 
+    auto add = [&](unsigned int value)
     {
-        std::lock_guard lock(deepestSumPtx);        
-        overallSummation += toSumValue;
-        return overallSummation;
+        std::lock_guard lock(deepest_ptx);
+        overall += value;
+        return overall;
     };
 
-    auto GetOverallSummation = [&overallSummation, &deepestSumPtx]
+    auto get = [&]
     {
-        std::lock_guard lock(deepestSumPtx);
-        return overallSummation;
+        std::lock_guard lock(deepest_ptx);
+        return overall;
     };
 
-    auto HardWork = [&OverallSum] (std::chrono::milliseconds hardWorkTimeout) 
+    auto hard_work = [&] (std::chrono::milliseconds timeout)
     {
-        for (size_t times = 0; times < 10; times++)
+        for (auto _ : std::views::iota(0, 10))
         {
-            OverallSum(1);
+            (void)_;
+            add(1);
             std::this_thread::sleep_for(1ms);
         }
 
-        std::this_thread::sleep_for(hardWorkTimeout);
+        std::this_thread::sleep_for(timeout);
     };
 
-    mutex::Priotex outerMainLoopPtx(100);
-    std::promise<void> startProm;
-    auto toSyncFuture = startProm.get_future().share();
+    mutex::Priotex outer_ptx(100);
+    constexpr int main_loop_iter = 5;
+    constexpr size_t main_loop_count = 3;
+    std::latch start(main_loop_count);
 
-    size_t iterTimesInMainLoop = 5;
-    auto MainLoop = [&outerMainLoopPtx, &OverallSum, &GetOverallSummation, &HardWork, iterTimesInMainLoop, toSyncFuture] (std::chrono::milliseconds hardWorkTimeout)
+    auto main_loop = [&] (std::chrono::milliseconds timeout)
     {
-        toSyncFuture.wait();
+        start.arrive_and_wait();
 
-        for (size_t i = 0; i < iterTimesInMainLoop; i++) {
+        for (auto _ : std::views::iota(0, main_loop_iter))
+        {
+            (void)_;
             // start hard work
-            HardWork(hardWorkTimeout);
+            hard_work(timeout);
             //end hard owrk
 
-            std::lock_guard lock(outerMainLoopPtx);
+            std::lock_guard lock(outer_ptx);
 
             // work with other shared memory space
-            [[maybe_unused]] auto&& overallSum = GetOverallSummation();
+            [[maybe_unused]] auto&& add = get();
             // end work with other shared memory space
         }
     };
-    
-    std::thread t1(MainLoop, 13ms);
-    std::thread t2(MainLoop, 27ms);
-    std::thread t3(MainLoop, 6ms);
 
-    std::this_thread::sleep_for(15ms);
-    startProm.set_value();
+    std::vector<std::jthread> thread_pool;
+    for (auto delay : { 13ms, 27ms, 6ms })
+        thread_pool.emplace_back(main_loop, delay);
 
-    t1.join(); t2.join(); t3.join();
-    long long unsigned int expectedOverallSummation = iterTimesInMainLoop * 3 * 10; // 3 - threads count; 10 - sum value per iter 
-    EXPECT_EQ(GetOverallSummation(), expectedOverallSummation);
+    thread_pool.clear();
+
+    long long unsigned int expected = main_loop_iter * main_loop_count * 10; // 10 - sum value per iter
+    EXPECT_EQ(expected, overall);
 }
 
-TEST(PriotexTest, TryLockMultiThreadUsing) //In doubt
+TEST(PriotexTest, TryLockUnderContention)
 {
-    unsigned int GlobalCounter = 0;
-    unsigned int GlobalAltCounter = 0;
+    constexpr size_t worker_count = 5;
+    constexpr int work_iter = 100;
 
-    mutex::Priotex MainLoopPtx(3000);
-    mutex::Priotex SomeOperationPtx(200);
-    mutex::Priotex CounterPtx(10);
+    mutex::Priotex shared_resource(10);
+    std::latch start(worker_count + 1); // workers + one holder
+    std::atomic holding = true;
 
-    auto IncreaseCounter = [&CounterPtx, &GlobalCounter]
+    std::atomic success_counter = 0u;
+    std::atomic failer_counter = 0u;
+
+    auto worker = [&]
     {
-        std::lock_guard lock(CounterPtx);
-        GlobalCounter++;
-    };
+        start.arrive_and_wait();
 
-    auto IncreaseAltCounter = [&CounterPtx, &GlobalAltCounter]
-    {
-        std::lock_guard lock(CounterPtx);
-        GlobalAltCounter++;
-    };
-
-    auto SomeOpWithCounter = [&SomeOperationPtx, &IncreaseCounter, &IncreaseAltCounter]
-    {
-        std::unique_lock lock(SomeOperationPtx, std::defer_lock);
-        if (lock.try_lock())
-            std::this_thread::sleep_for(5ms);
-        else
-            IncreaseAltCounter();
-
-        IncreaseCounter();
-    };
-    auto SomeOp = [&SomeOperationPtx]
-    {
-        std::lock_guard lock(SomeOperationPtx);
-        std::this_thread::sleep_for(5ms);
-    };
-
-
-    size_t IterTimes = 5;
-    auto MainLoopFirst = [IterTimes, &MainLoopPtx, &SomeOpWithCounter, &SomeOp]
-    {
-        for (size_t i = 0; i < IterTimes; i++) {
-            std::lock_guard lock(MainLoopPtx);
-            SomeOpWithCounter();
+        for (auto _ : std::views::iota(0, work_iter))
+        {
+            (void)_;
+            if (shared_resource.try_lock())
+            {
+                success_counter.fetch_add(1, std::memory_order_relaxed);
+                shared_resource.unlock();
+            }
+            else
+                failer_counter.fetch_add(1, std::memory_order_relaxed);
         }
     };
 
-    auto MainLoopSecond = [IterTimes, &MainLoopPtx, &SomeOpWithCounter, &IncreaseCounter, &SomeOp]
-    {
-        std::unique_lock lock(MainLoopPtx);
-        for (size_t i = 0; i < IterTimes; i++) {
-            lock.unlock();
-            SomeOp();
-            lock.lock();
-        }
-    };
-    
-    {
-        std::jthread th4(MainLoopSecond);
-        std::jthread th5(MainLoopSecond);
+    std::jthread holder([&] {
+        std::lock_guard lock(shared_resource);
+        start.arrive_and_wait();
+        holding.wait(true, std::memory_order_relaxed);
+    });
 
+    auto workers =  std::views::iota(0uz, worker_count)
+                |   std::views::transform([&](auto) {
+                        return std::jthread(worker);
+                    })
+                |   std::ranges::to<std::vector>();
 
-        std::jthread th1(MainLoopFirst);
-        std::jthread th2(MainLoopFirst);
-        std::jthread th3(MainLoopFirst);
-    }
-    
-    EXPECT_EQ(GlobalCounter, GlobalAltCounter);
+    workers.clear();
+
+    EXPECT_EQ(success_counter.load(), 0u);
+    EXPECT_EQ(failer_counter.load(), work_iter * worker_count);
+
+    holding.store(false, std::memory_order_relaxed);
+    holding.notify_one();
+    holder.join();
+
+    EXPECT_TRUE(shared_resource.try_lock());
+    shared_resource.unlock();
 }
