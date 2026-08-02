@@ -5,6 +5,8 @@
 #include <atomic>
 #include <vector>
 #include <future>
+#include <latch>
+#include <ranges>
 
 TEST(ThreadSafeQueue, SingleThreadMethodsTest)
 {
@@ -47,58 +49,50 @@ TEST(ThreadSafeQueue, SingleThreadMethodsTest)
 
 TEST(ThreadSafeQueue, MultiThreadTest)
 {
+    constexpr size_t writers_count = 3;
+    constexpr size_t readers_count = 2;
+    constexpr unsigned write_iter_count = 1000;
+
     ThreadSafeStructs::ThreadSafeQueue<unsigned> queue;
-    unsigned write_iter_count = 1000u; 
     
-    std::atomic<bool> go = false;
     std::atomic<unsigned> out_sum = 0;
-    int writers_count = 3;
-    std::atomic<int> writers_ended = 0;
+    std::atomic<int> writers_done = 0;
+    std::latch  start(writers_count + readers_count);
 
-    auto WriteQueue = [&go, &queue, &writers_ended, write_iter_count] 
+    auto WriteQueue = [&start, &queue, &writers_done, write_iter_count]
     {
-        while (!go.load()) std::this_thread::yield();
-
+        start.arrive_and_wait();
         for (unsigned i = 0; i < write_iter_count; i++)
             queue.push(i);
 
-        writers_ended++;
+        writers_done.fetch_add(1, std::memory_order_release);
     };
 
-    auto ReadQueue = [&go, &queue, &writers_ended, writers_count, &out_sum] 
+    auto ReadQueue = [&start, &queue, &writers_done, writers_count, &out_sum] 
     {
-        while (!go.load()) std::this_thread::yield();
+        start.arrive_and_wait();
 
         unsigned inner_sum = 0;
-        while (writers_ended.load() != writers_count || !queue.empty())
+        while (writers_done.load(std::memory_order_acquire) != writers_count || !queue.empty())
+        {
             if (auto queue_value = queue.try_pop(); queue_value != nullptr)
                 inner_sum += *queue_value;
             else
                 std::this_thread::yield();
+        }
 
-        out_sum.fetch_add(inner_sum);
+        out_sum.fetch_add(inner_sum, std::memory_order_relaxed);
     };
 
-    std::vector<std::thread> writers_array(writers_count);
-    std::vector<std::thread> readers_array(2);
+    std::vector<std::jthread> pool;
 
-    for (auto& writer : writers_array) {
-        writer = std::thread(WriteQueue);
-    }
+    for ([[maybe_unused]] auto _ : std::views::iota(0uz, writers_count))
+        pool.emplace_back(WriteQueue);
 
-    for (auto& reader : readers_array) {
-        reader = std::thread(ReadQueue);
-    }
+    for ([[maybe_unused]] auto _ : std::views::iota(0uz, readers_count))
+        pool.emplace_back(ReadQueue);
 
-    go = true;
-
-    for (auto& writer : writers_array) {
-        writer.join();
-    }
-
-    for (auto& reader : readers_array) {
-        reader.join();
-    }
+    pool.clear();
 
     unsigned expected_value = static_cast<unsigned>((write_iter_count * (write_iter_count - 1)) / 2) * writers_count; 
     EXPECT_EQ(out_sum.load(), expected_value);

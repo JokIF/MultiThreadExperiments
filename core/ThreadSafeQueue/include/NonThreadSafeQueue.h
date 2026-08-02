@@ -1,12 +1,10 @@
 #pragma once
 #include <memory>
-#include <exception>
+#include <expected>
 
 namespace NonThreadSafeStructs
 {
-class EmptyQueue : public std::exception {
-    char const* what() const noexcept override { return "Queue is empty"; }
-};
+enum class QueueError { Empty };
 
 template <typename T>
 class NonThreadSafeQueue
@@ -20,14 +18,13 @@ class NonThreadSafeQueue
 public:
     NonThreadSafeQueue() = default;
     
-    NonThreadSafeQueue(NonThreadSafeQueue&&) noexcept = default;
-
+    NonThreadSafeQueue(NonThreadSafeQueue&&) = delete;
     NonThreadSafeQueue(const NonThreadSafeQueue&) = delete;
     NonThreadSafeQueue& operator=(const NonThreadSafeQueue&) = delete;
-    NonThreadSafeQueue& operator=(NonThreadSafeQueue&&) noexcept = delete;
+    NonThreadSafeQueue& operator=(NonThreadSafeQueue&&) = delete;
 
     void push(T value);
-    T pop();
+    std::expected<T, QueueError> pop();
     std::shared_ptr<T> try_pop();
 
     bool empty() const { return head_node == nullptr; }
@@ -52,9 +49,10 @@ void NonThreadSafeQueue<T>::push(T value)
 }
 
 template <typename T>
-T NonThreadSafeQueue<T>::pop()
+std::expected<T, QueueError> NonThreadSafeQueue<T>::pop()
 {
-    if (head_node == nullptr) throw EmptyQueue();
+    if (head_node == nullptr)
+        return std::unexpected(QueueError::Empty);
 
     auto old_head_node = std::move(head_node);
     head_node = std::move(old_head_node->next_node);

@@ -1,54 +1,54 @@
 #include <thread>
 #include <mutex>
 #include <atomic>
-#include <chrono>
 #include <string>
-#include <iostream>
-
-template <typename T, size_t N>
-constexpr size_t array_size(const T (&)[N]) {
-    return N;
-}
+#include <print>
+#include <format>
+#include <array>
+#include <ranges>
 
 using queue_type = unsigned long int;
 
-queue_type gl_queue[1000];
-std::atomic<size_t> len_queue = 0;
-std::string outString;
+std::array<queue_type, 1000> gl_queue;
+std::atomic<long> len_queue = 0;
+std::string out_string;
 std::atomic<bool> need_break = false;
+std::mutex out_mtx;
 
 void process_thread_data(const std::string& thread_name, int queue_data)
 {
-    std::string threadData = thread_name + " >> " + std::to_string(queue_data) + "\n";
-
-    static std::mutex mtx;
-    std::lock_guard lock(mtx);
-    outString += threadData;
+    auto thread_data =  std::format("{} >> {}\n", thread_name, queue_data);
+    std::lock_guard lock(out_mtx);
+    out_string += thread_data;
 }
 
 void populate_queue()
 {
-    size_t gl_queue_size = array_size(gl_queue);
-
-    for (size_t i = 0; i < gl_queue_size; i++)
+    for (auto i : std::views::iota(0uz, gl_queue.size()))
         gl_queue[i] = static_cast<queue_type>(i);
 
-    len_queue.store(gl_queue_size, std::memory_order_release);
+    len_queue.store(static_cast<long>(gl_queue.size()), std::memory_order_release);
 }
 
 void read_queue(const std::string& thread_name)
 {
-    size_t index_queue;
+    long index_queue;
     while (true)
     {
-        if (index_queue = len_queue.fetch_sub(1, std::memory_order_acquire); index_queue <= 0) {
-            if (index_queue < -1000000) len_queue.store(0, std::memory_order_relaxed);
-            if (need_break.load()) break;
-            std::this_thread::sleep_for(std::chrono::microseconds(1));
+        index_queue = len_queue.fetch_sub(1, std::memory_order_acquire);
+        if (index_queue <= 0)
+        {
+            if (index_queue < 0)
+                len_queue.store(0, std::memory_order_relaxed);
+
+            if (need_break.load())
+                break;
+
+            std::this_thread::yield();
             continue;
         }
 
-        process_thread_data(thread_name, gl_queue[index_queue-1]);
+        process_thread_data(thread_name, gl_queue[static_cast<size_t>(index_queue) - 1]);
     }
 }
 
@@ -65,6 +65,5 @@ int main()
     t_second_read.join();
     t_first_read.join();
 
-    std::cout << "outString" << std::endl;
-    std::cout << outString << std::endl;
+    std::println("out_string: {}", out_string);
 }

@@ -4,9 +4,12 @@
 #include <shared_mutex>
 #include <vector>
 #include <algorithm>
+#include <expected>
 
 namespace ThreadSafeStructs
 {
+enum class MapError { NotFound };
+
 template <typename Key, typename Value, typename Hash = std::hash<Key>>
 class SimpleThreadSafeMap
 {
@@ -20,19 +23,26 @@ class SimpleThreadSafeMap
 
         bucket_type() = default;
 
-        Value           get_elem_for(const Key& key, const Value& default_value);
-        void            set_or_update_elem_for(const Key& key, const Value& value);
-        size_type       remove_elem_for(const Key& key);
+        std::expected<Value, MapError>  get(const Key& key) const;
+        void        set_or_update(const Key& key, const Value& value);
+        size_type   remove_elem(const Key& key)
+        {
+            std::unique_lock lock(mtx);
+            return bucket.remove_if([&](const bucket_elem& elem) { return elem.first == key; });
+        }
 
     private:
-        bucket_elem_iter    find_elem_for(const Key& key);
+        template<typename Self>
+        decltype(auto)    find_elem(this Self&& self, const Key& key) {
+            return std::find_if(self.bucket.begin(), self.bucket.end(), [&](const bucket_elem& elem) { return elem.first == key; });
+        }
 
         std::list<bucket_elem>      bucket;
         mutable std::shared_mutex   mtx;
     };
 
 public:
-    SimpleThreadSafeMap(size_t bucket_size = 19, const Hash& hasher = Hash());
+    SimpleThreadSafeMap(size_t bucket_size = 19, Hash hasher = Hash());
 
     SimpleThreadSafeMap(const SimpleThreadSafeMap&) = delete;
     SimpleThreadSafeMap(SimpleThreadSafeMap&&) = delete;
@@ -40,83 +50,66 @@ public:
     SimpleThreadSafeMap& operator=(SimpleThreadSafeMap&&) = delete;
 
 
-    Value   value_for(const Key& key, const Value& default_value = Value()) const;
-    void    set_or_update_value_for(const Key& key, const Value& value);
-    bucket_type::size_type  remove_value_for(const Key& key);
+    std::expected<Value, MapError>   get_value(const Key& key) const;
+    void    set_or_update_value(const Key& key, const Value& value);
+    bucket_type::size_type  remove_value(const Key& key);
 
 private:
-    bucket_type&   get_bucket(const Key& key) const;
+    template <typename Self>
+    decltype(auto)   get_bucket(this Self&& self, const Key& key) {
+        return *self.buckets[self.hasher(key) % self.buckets.size()];
+    }
 
     std::vector<std::unique_ptr<bucket_type>> buckets;
     Hash hasher;
 };
+
 template <typename Key, typename Value, typename Hash>
-SimpleThreadSafeMap<Key, Value, Hash>::SimpleThreadSafeMap(size_t bucket_size, const Hash& hasher)
-    : buckets(bucket_size), hasher(hasher)
+SimpleThreadSafeMap<Key, Value, Hash>::SimpleThreadSafeMap(size_t bucket_size, Hash hasher)
+    : hasher(std::move(hasher))
 {
+    buckets.reserve(bucket_size);
     for (size_t i = 0; i < bucket_size; ++i)
         buckets.emplace_back(std::make_unique<bucket_type>());
 }
 
-
 template <typename Key, typename Value, typename Hash>
-SimpleThreadSafeMap<Key, Value, Hash>::bucket_type& SimpleThreadSafeMap<Key, Value, Hash>::get_bucket(const Key& key) const
-{
-    const size_t bucket_index = hasher(key) % buckets.size();
-    return *buckets[bucket_index];
-}
-
-template <typename Key, typename Value, typename Hash>
-Value SimpleThreadSafeMap<Key, Value, Hash>::bucket_type::get_elem_for(const Key& key, const Value& default_value)
+std::expected<Value, MapError> SimpleThreadSafeMap<Key, Value, Hash>::bucket_type::get(const Key& key) const
 {
     std::shared_lock lock(mtx);
-    auto&& iter = find_elem_for(key);
+    const auto&& iter = find_elem(key);
     if (iter == bucket.end())
-        return default_value;
+        return std::unexpected(MapError::NotFound);
 
     return iter->second;
 }
 
 template <typename Key, typename Value, typename Hash>
-void SimpleThreadSafeMap<Key, Value, Hash>::bucket_type::set_or_update_elem_for(const Key& key, const Value& value)
+void SimpleThreadSafeMap<Key, Value, Hash>::bucket_type::set_or_update(const Key& key, const Value& value)
 {
     std::unique_lock lock(mtx);
-    auto&& iter = find_elem_for(key);
+    auto&& iter = find_elem(key);
     if (iter != bucket.end())
         iter->second = value;
     else
         bucket.emplace_back(key, value);
-    
 }
 
 template <typename Key, typename Value, typename Hash>
-SimpleThreadSafeMap<Key, Value, Hash>::bucket_type::size_type SimpleThreadSafeMap<Key, Value, Hash>::bucket_type::remove_elem_for(const Key& key)
+std::expected<Value, MapError> SimpleThreadSafeMap<Key, Value, Hash>::get_value(const Key& key) const
 {
-    std::unique_lock lock(mtx);
-    return bucket.remove_if([&](const bucket_elem& elem) { return elem.first == key; });    
+    return get_bucket(key).get(key);
 }
 
 template <typename Key, typename Value, typename Hash>
-SimpleThreadSafeMap<Key, Value, Hash>::bucket_type::bucket_elem_iter SimpleThreadSafeMap<Key, Value, Hash>::bucket_type::find_elem_for(const Key& key)
+void SimpleThreadSafeMap<Key, Value, Hash>::set_or_update_value(const Key& key, const Value& value)
 {
-    return std::find_if(bucket.begin(), bucket.end(), [&](const bucket_elem& elem) { return elem.first == key; });
+    return get_bucket(key).set_or_update(key, value);
 }
 
 template <typename Key, typename Value, typename Hash>
-Value SimpleThreadSafeMap<Key, Value, Hash>::value_for(const Key& key, const Value& default_value) const
+SimpleThreadSafeMap<Key, Value, Hash>::bucket_type::size_type SimpleThreadSafeMap<Key, Value, Hash>::remove_value(const Key& key)
 {
-    return get_bucket(key).get_elem_for(key, default_value);
-}
-
-template <typename Key, typename Value, typename Hash>
-void SimpleThreadSafeMap<Key, Value, Hash>::set_or_update_value_for(const Key& key, const Value& value)
-{
-    return get_bucket(key).set_or_update_elem_for(key, value);
-}
-
-template <typename Key, typename Value, typename Hash>
-SimpleThreadSafeMap<Key, Value, Hash>::bucket_type::size_type SimpleThreadSafeMap<Key, Value, Hash>::remove_value_for(const Key& key)
-{
-    return get_bucket(key).remove_elem_for(key);
+    return get_bucket(key).remove_elem(key);
 }
 }

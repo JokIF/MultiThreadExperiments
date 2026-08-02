@@ -28,16 +28,20 @@ TEST(PriotexTest, CorrectTwoPriotexLock)
 
 TEST(PriotexTest, CorrectTwoPriotexUnLock)
 {
-    mutex::Priotex firstPtx(2);
-    mutex::Priotex secondPtx(1);
-    UnitTestDataPriotex secondPtxTestWrapper(secondPtx);
+    mutex::Priotex firstPtx(3);
+    mutex::Priotex secondPtx(2);
+    mutex::Priotex thirdPtx(1);
+    UnitTestDataPriotex ptxTestWrapper(secondPtx);
 
     firstPtx.lock();
     secondPtx.lock();
+    thirdPtx.lock();
 
-    EXPECT_EQ(secondPtxTestWrapper.GetCurrentThreadPriority(), 1);
+    EXPECT_EQ(ptxTestWrapper.GetCurrentThreadPriority(), 1);
+    EXPECT_NO_THROW(thirdPtx.unlock());
+    EXPECT_EQ(ptxTestWrapper.GetCurrentThreadPriority(), 2);
     EXPECT_NO_THROW(secondPtx.unlock());
-    EXPECT_EQ(secondPtxTestWrapper.GetCurrentThreadPriority(), 2);
+    EXPECT_EQ(ptxTestWrapper.GetCurrentThreadPriority(), 3);
     EXPECT_NO_THROW(firstPtx.unlock());
 }
 

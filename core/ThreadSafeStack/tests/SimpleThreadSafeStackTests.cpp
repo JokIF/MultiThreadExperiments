@@ -1,6 +1,7 @@
 #include <thread>
-#include <stdexcept>
 #include <atomic>
+#include <latch>
+#include <ranges>
 
 #include "SimpleThreadSafeStack.h"
 #include "gtest/gtest.h"
@@ -16,12 +17,14 @@ TEST(SimpleThreadSafeStack, SingleThreadCorrectUsingMethodsTest)
 
     EXPECT_FALSE(firstStack.empty());
 
-    EXPECT_EQ(*firstStack.pop(), 200);
+    auto first_value = firstStack.try_pop();
+    EXPECT_TRUE(first_value.has_value());
+    EXPECT_EQ(*first_value, 200);
 
     ThreadSafeStructs::SimpleThreadSafeStack<int> secondStack(firstStack);
 
-    int stack_value = 3000;
-    secondStack.pop(stack_value);
+    int stack_value = 0;
+    EXPECT_TRUE(secondStack.try_pop(stack_value));
     EXPECT_EQ(stack_value, 10);
 
     EXPECT_TRUE(secondStack.empty());
@@ -35,10 +38,12 @@ TEST(SimpleThreadSafeStack, EmptyStackPopTest)
     ASSERT_TRUE(stack.empty());
 
     stack.push(10);
-    stack.pop();
+    (void)stack.try_pop();
 
     ASSERT_TRUE(stack.empty());
-    EXPECT_THROW(stack.pop(), ThreadSafeStructs::EmptyStack);
+    auto value = stack.try_pop();
+    EXPECT_FALSE(value.has_value());
+    EXPECT_EQ(value.error(), ThreadSafeStructs::StackError::Empty);
     EXPECT_TRUE(stack.empty());
 }
 
@@ -46,12 +51,13 @@ TEST(SimpleThreadSafeStack, ThrowableCopyingTest)
 {
     struct ThrowOnCopy
     {
-        int someValue;
+        int someValue = 0;
 
+        ThrowOnCopy() = default;
         ThrowOnCopy(int someValue) : someValue(someValue) {}
 
-        ThrowOnCopy(const ThrowOnCopy&) { throw std::logic_error("It can not copy"); }
-        ThrowOnCopy& operator=(const ThrowOnCopy&) { throw std::logic_error("It can not copy"); }
+        ThrowOnCopy(const ThrowOnCopy&) { throw std::logic_error("copy denied"); }
+        ThrowOnCopy& operator=(const ThrowOnCopy&) { throw std::logic_error("copy denied"); }
         
         ThrowOnCopy(ThrowOnCopy&&) noexcept = default;
         ThrowOnCopy& operator=(ThrowOnCopy&&) noexcept = default;
@@ -62,13 +68,14 @@ TEST(SimpleThreadSafeStack, ThrowableCopyingTest)
     EXPECT_NO_THROW(stack.push(0));
     EXPECT_NO_THROW(stack.push(10));
 
-    std::shared_ptr<ThrowOnCopy> firstValue;
+    std::expected<ThrowOnCopy, ThreadSafeStructs::StackError> firstValue;
 
-    EXPECT_NO_THROW(firstValue = stack.pop());
+    EXPECT_NO_THROW(firstValue = stack.try_pop());
+    EXPECT_TRUE(firstValue.has_value());
     EXPECT_EQ(firstValue->someValue, 10);
 
     ThrowOnCopy secondValue(200);
-    EXPECT_NO_THROW(stack.pop(secondValue));
+    EXPECT_NO_THROW(stack.try_pop(secondValue));
     EXPECT_EQ(secondValue.someValue, 0);
     ASSERT_TRUE(stack.empty());
 }
@@ -76,48 +83,43 @@ TEST(SimpleThreadSafeStack, ThrowableCopyingTest)
 TEST(SimpleThreadSafeStack, MultiThreadWorkTest)
 {
     ThreadSafeStructs::SimpleThreadSafeStack<int> stack; 
-    constexpr unsigned writeIterCount = 1000;
-    unsigned sumFromStack = 0;
-    std::atomic<bool> go = false;
-    std::atomic<short> write_in_progress = 0;
+    constexpr unsigned write_iters = 1000;
+    constexpr unsigned writer_count = 2;
+    std::latch start(writer_count + 1); // writters(2) + reader(1)
+
+    std::atomic writters_done = 0u;
+    std::atomic outSum = 0uz;
     
-    auto WriteStack = [&go, &write_in_progress, &stack, writeIterCount](bool odd)
+    auto WriteStack = [&start, &writters_done, &stack, write_iters](bool odd)
     {
-        while (!go.load()) std::this_thread::yield();
-
-        for (unsigned i = odd ? 1 : 0; i < writeIterCount; i += 2) {
+        start.arrive_and_wait();
+        for (auto i :   std::views::iota(0u, write_iters) |
+                        std::views::filter([odd](unsigned val) { return (val % 2 == 1) == odd; }))
             stack.push(i);
-        }
 
-        write_in_progress.fetch_add(1, std::memory_order_release);
+        writters_done.fetch_add(1, std::memory_order_release);
+        writters_done.notify_all();
     };
 
-    auto ReadStack = [&go, &write_in_progress, &stack, &sumFromStack]
+    auto ReadStack = [&start, &writters_done, &stack, &outSum]
     {
-        while (!go.load()) std::this_thread::yield();
+        start.arrive_and_wait();
 
-        std::shared_ptr<int> stackValue = nullptr;
-        while (write_in_progress.load(std::memory_order_acquire) != 2 || !stack.empty())
-            try {
-                sumFromStack += *stack.pop();
-            } catch(ThreadSafeStructs::EmptyStack&) { 
-                std::this_thread::yield(); 
-            }
+        while (writters_done.load(std::memory_order_acquire) != 2 || !stack.empty())
+            if (auto value = stack.try_pop(); value.has_value())
+                outSum.fetch_add(*value, std::memory_order_relaxed);
+            else
+                writters_done.wait(writer_count, std::memory_order_relaxed); // If there are more readers, the wait could become endless
     };
 
-    std::thread tFirstWrite(WriteStack, true);
-    std::thread tSecondWrite(WriteStack, false);
-    std::thread tRead(ReadStack);
+    std::vector<std::jthread> pool;
 
-    go.store(true);
+    pool.emplace_back(WriteStack, true);
+    pool.emplace_back(WriteStack, false);
+    pool.emplace_back(ReadStack);
 
-    tFirstWrite.join();
-    tSecondWrite.join();
-    tRead.join();
+    pool.clear();
 
-    unsigned expectSum = 0;
-    for (unsigned i = 0; i < writeIterCount; i++) 
-        expectSum += i;
-
-    EXPECT_EQ(expectSum, sumFromStack);
+    unsigned expectSum = write_iters * (write_iters - 1u) / 2u;
+    EXPECT_EQ(expectSum, outSum.load());
 }
