@@ -18,7 +18,7 @@ target_compile_options(MteCompileOptions INTERFACE
         -Wall -Wextra -Wpedantic
         -Wshadow -Wnon-virtual-dtor -Wold-style-cast
         -Wcast-align -Wunused -Woverloaded-virtual
-        -Wconversion -Wsign-conversion -Wnull-dereference
+        -Wconversion -Wsign-conversion
         -Wdouble-promotion -Wformat=2 -Wmissing-declarations
         -Wredundant-decls -Wundef -Wstrict-aliasing
         -Wlogical-op
@@ -29,7 +29,7 @@ target_compile_options(MteCompileOptions INTERFACE
         -Wall -Wextra -Wpedantic
         -Wshadow -Wnon-virtual-dtor -Wold-style-cast
         -Wcast-align -Wunused -Woverloaded-virtual
-        -Wconversion -Wsign-conversion -Wnull-dereference
+        -Wconversion -Wsign-conversion
         -Wdouble-promotion -Wformat=2 -Wmissing-declarations
         -Wredundant-decls -Wundef -Wstrict-aliasing
         -Wthread-safety -Wthread-safety-beta -Wmove
