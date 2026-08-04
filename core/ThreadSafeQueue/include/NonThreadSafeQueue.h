@@ -10,7 +10,7 @@ template <typename T>
 class NonThreadSafeQueue
 {
     struct Node {
-        Node(T value) : value(std::move(value)) {}
+        Node(T value_) : value(std::move(value_)) {}
         T value;
         std::unique_ptr<Node> next_node = nullptr;
     };

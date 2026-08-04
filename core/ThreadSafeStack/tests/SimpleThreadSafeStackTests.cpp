@@ -54,7 +54,7 @@ TEST(SimpleThreadSafeStack, ThrowableCopyingTest)
         int someValue = 0;
 
         ThrowOnCopy() = default;
-        ThrowOnCopy(int someValue) : someValue(someValue) {}
+        ThrowOnCopy(int value) : someValue(value) {}
 
         ThrowOnCopy(const ThrowOnCopy&) { throw std::logic_error("copy denied"); }
         ThrowOnCopy& operator=(const ThrowOnCopy&) { throw std::logic_error("copy denied"); }
@@ -82,22 +82,22 @@ TEST(SimpleThreadSafeStack, ThrowableCopyingTest)
 
 TEST(SimpleThreadSafeStack, MultiThreadWorkTest)
 {
-    ThreadSafeStructs::SimpleThreadSafeStack<int> stack; 
+    ThreadSafeStructs::SimpleThreadSafeStack<long> stack;
     constexpr unsigned write_iters = 1000;
     constexpr unsigned writer_count = 2;
     std::latch start(writer_count + 1); // writters(2) + reader(1)
 
     std::atomic writters_done = 0u;
-    std::atomic outSum = 0uz;
+    std::atomic outSum = 0l;
     
     auto WriteStack = [&start, &writters_done, &stack, write_iters](bool odd)
     {
         start.arrive_and_wait();
         for (auto i :   std::views::iota(0u, write_iters) |
                         std::views::filter([odd](unsigned val) { return (val % 2 == 1) == odd; }))
-            stack.push(i);
+            stack.push(static_cast<long>(i));
 
-        writters_done.fetch_add(1, std::memory_order_release);
+        writters_done.fetch_add(1u, std::memory_order_release);
         writters_done.notify_all();
     };
 

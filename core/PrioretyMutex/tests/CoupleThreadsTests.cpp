@@ -60,7 +60,7 @@ TEST(PriotexTest, CorrectMultiThreadUsing)
             std::lock_guard lock(outer_ptx);
 
             // work with other shared memory space
-            [[maybe_unused]] auto&& add = get();
+            [[maybe_unused]] auto&& to_add = get();
             // end work with other shared memory space
         }
     };
