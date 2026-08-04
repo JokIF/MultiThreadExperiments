@@ -6,8 +6,10 @@
 #include <print>
 #include <ranges>
 
-constexpr int threads_count = 5;
-constexpr int loop_count = 10;
+namespace
+{
+constexpr size_t    threads_count = 5;
+constexpr size_t    loop_count = 10;
 
 std::latch start(threads_count);
 
@@ -23,12 +25,12 @@ void increment(std::atomic<int>& var_to_inc, values_array& values)
 {
     start.arrive_and_wait();
 
-    for (auto i : std::views::iota(0, loop_count))
+    for (auto i : std::views::iota(0uz, loop_count))
     {
         values[i].x = ::x.load(std::memory_order_relaxed);
         values[i].y = ::y.load(std::memory_order_relaxed);
         values[i].z = ::z.load(std::memory_order_relaxed);
-        var_to_inc.store(i + 1, std::memory_order_relaxed);
+        var_to_inc.store(static_cast<int>(i) + 1, std::memory_order_relaxed);
         std::this_thread::yield();
     }
 }
@@ -37,7 +39,7 @@ void read_vals(values_array& values)
 {
     start.arrive_and_wait();
 
-    for (auto i : std::views::iota(0, loop_count))
+    for (auto i : std::views::iota(0uz, loop_count))
     {
         values[i].x = ::x.load(std::memory_order_relaxed);
         values[i].y = ::y.load(std::memory_order_relaxed);
@@ -48,13 +50,14 @@ void read_vals(values_array& values)
 
 void print(const values_array& v)
 {
-    for (auto i : std::views::iota(0, loop_count))
+    for (auto i : std::views::iota(0uz, loop_count))
     {
-        if (i) std::print(",");
+        if (i != 0uz) std::print(",");
 
         std::print("({},{},{})", v[i].x, v[i].y, v[i].z);
     }
     std::println("");
+}
 }
 
 int main()

@@ -3,6 +3,8 @@
 #include <print>
 #include <cassert>
 
+namespace
+{
 bool x = false;
 std::atomic<bool> y = false;
 std::atomic<int> z = 0;
@@ -20,6 +22,7 @@ void read_y_then_x()
     y.wait(false, std::memory_order_relaxed);
     std::atomic_thread_fence(std::memory_order_acquire);
     if (x) z++;
+}
 }
 
 int main()

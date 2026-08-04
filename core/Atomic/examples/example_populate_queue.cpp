@@ -7,6 +7,8 @@
 #include <array>
 #include <ranges>
 
+namespace
+{
 using queue_type = unsigned long int;
 
 std::array<queue_type, 1000> gl_queue;
@@ -15,7 +17,7 @@ std::string out_string;
 std::atomic<bool> need_break = false;
 std::mutex out_mtx;
 
-void process_thread_data(const std::string& thread_name, int queue_data)
+void process_thread_data(const std::string& thread_name, queue_type queue_data)
 {
     auto thread_data =  std::format("{} >> {}\n", thread_name, queue_data);
     std::lock_guard lock(out_mtx);
@@ -50,6 +52,7 @@ void read_queue(const std::string& thread_name)
 
         process_thread_data(thread_name, gl_queue[static_cast<size_t>(index_queue) - 1]);
     }
+}
 }
 
 int main()

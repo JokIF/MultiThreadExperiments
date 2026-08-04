@@ -85,14 +85,15 @@ TEST(AtomicTest, AtomicExchange)
 TEST(AtomicTest, AtomicExchangeWeak)
 {
     constexpr size_t thread_count = 10;
+    constexpr size_t thread_loop_iter_count = 100;
+
     std::atomic<int> counter = 0;
-    int thread_loop_iter_count = 100;
     std::latch start(thread_count);
 
     auto exchange_weak_write = [&start, &counter, thread_loop_iter_count]
     {
         start.arrive_and_wait();
-        for (auto _ : std::views::iota(0, thread_loop_iter_count))
+        for (auto _ : std::views::iota(0uz, thread_loop_iter_count))
         {
             (void)_;
             int expected;

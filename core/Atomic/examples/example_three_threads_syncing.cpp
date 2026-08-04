@@ -4,6 +4,8 @@
 #include <cassert>
 #include <array>
 
+namespace
+{
 std::array<int, 5> data;
 std::atomic<int> sync = 0;
 
@@ -31,6 +33,7 @@ void third_thread_reader()
     assert(data[4] == 40000);
 
     std::println("All rights!");
+}
 }
 
 int main()

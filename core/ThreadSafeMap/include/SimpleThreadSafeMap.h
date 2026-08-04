@@ -65,8 +65,8 @@ private:
 };
 
 template <typename Key, typename Value, typename Hash>
-SimpleThreadSafeMap<Key, Value, Hash>::SimpleThreadSafeMap(size_t bucket_size, Hash hasher)
-    : hasher(std::move(hasher))
+SimpleThreadSafeMap<Key, Value, Hash>::SimpleThreadSafeMap(size_t bucket_size, Hash hasher_)
+    : hasher(std::move(hasher_))
 {
     buckets.reserve(bucket_size);
     for (size_t i = 0; i < bucket_size; ++i)

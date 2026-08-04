@@ -4,6 +4,8 @@
 #include <print>
 #include <cassert>
 
+namespace
+{
 struct X
 {
     int i{};
@@ -37,6 +39,7 @@ void read_x_and_a()
         std::println("The 'a' data race. out value: {}", local_a);
 
     delete x;
+}
 }
 
 int main()
