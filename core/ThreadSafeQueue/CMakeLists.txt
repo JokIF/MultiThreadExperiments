@@ -6,5 +6,6 @@ if (BUILD_TESTING)
         tests/NonThreadSafeQueueTests.cpp
         tests/SimpleThreadSafeQueueTests.cpp
         tests/ThreadSafeQueueTests.cpp
+        tests/WaitFreeThreadSafeQueueTests.cpp
     )
 endif()
